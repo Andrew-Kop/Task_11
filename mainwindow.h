@@ -8,6 +8,7 @@
 #include <QTextEdit>
 #include <QCheckBox>
 #include <QCustomPlot.h>
+#include "secondwindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -23,7 +24,7 @@ public:
 
 private:
     Ui::MainWindow *ui;
-
+    secondwindow *SecondWindowptr;
     // Поля ввода
     QLineEdit *lengthInput;
     QLineEdit *gravityInput;
@@ -32,15 +33,11 @@ private:
     QLineEdit *v0Input;
     QLineEdit *stepInput;
     QLineEdit *epsilonInput;
-    QComboBox *timeOrCyclesComboBox;  // Выпадающий список для выбора времени или циклов
     QLineEdit *timeInput;             // Поле для ввода времени
 
 
     // Кнопка "Рассчитать"
     QPushButton *calculateButton;
-
-    // Поле справки
-    QTextEdit *helpField;
 
     // Чекбокс
     QCheckBox *stepControlCheckbox;
@@ -55,7 +52,7 @@ private:
     void toggleTimeOrCycles();
 
     void calculatePendulum();
-
+    bool validateInput();
     void plotGraphs(const QString &outputFile);
 
 };

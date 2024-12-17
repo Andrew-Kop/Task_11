@@ -8,13 +8,15 @@
 #include <QTextStream>
 #include "qcustomplot.h"
 #include "Logic.h"
+#include <QDebug>
+#include <QMessageBox>
 
 // Константы
 const double PI = 3.141592653589793;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+    , ui(new Ui::MainWindow), SecondWindowptr(nullptr)
 {
     ui->setupUi(this);
 
@@ -51,11 +53,6 @@ MainWindow::MainWindow(QWidget *parent)
     // Кнопка "Рассчитать"
     calculateButton = new QPushButton("Рассчитать", this);
 
-    // Поле справки
-    helpField = new QTextEdit(this);
-    helpField->setReadOnly(true);
-    helpField->setPlaceholderText("Справочная информация появится здесь.");
-
     // Графики
     trajectoryPlot = new QCustomPlot(this);
     trajectoryPlot->setMinimumHeight(250);
@@ -71,8 +68,7 @@ MainWindow::MainWindow(QWidget *parent)
     timeInput = new QLineEdit(this);
     timeInput->setPlaceholderText("Время расчёта (t_end)");
 
-    QLabel *helpLabel = new QLabel("Справка:", this);
-    helpLabel->setStyleSheet("font-weight: bold; font-size: 16px; color: #4CAF50;");
+
     // Layout
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     QGridLayout *inputLayout = new QGridLayout();
@@ -91,8 +87,6 @@ MainWindow::MainWindow(QWidget *parent)
     mainLayout->addLayout(inputLayout);
     mainLayout->addWidget(trajectoryPlot);
     mainLayout->addWidget(phasePortraitPlot);
-    mainLayout->addWidget(helpLabel);
-    mainLayout->addWidget(helpField);
 
     QWidget *centralWidget = new QWidget(this);
     centralWidget->setLayout(mainLayout);
@@ -105,6 +99,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Применение стилей
     applyStyles();
+
 
 }
 
@@ -137,18 +132,6 @@ void MainWindow::applyStyles()
 
     calculateButton->setStyleSheet(buttonStyle);
 
-    QString textEditStyle =
-        "QTextEdit {"
-        "    font-size: 16px;"
-        "    color: black;"
-        "    background-color: #F1F8E9;"  // Светлый фон для текстового поля
-        "    border: 1px solid #A5D6A7;"  // Обводка текста
-        "    border-radius: 8px;"  // Закругленные углы
-        "    padding: 5px;"
-                            "}";
-
-    helpField->setStyleSheet(textEditStyle);
-
 }
 
 void MainWindow::toggleEpsilonInput(bool checked)
@@ -162,7 +145,9 @@ MainWindow::~MainWindow()
 {
     // Очистка динамически выделенных ресурсов
     delete ui;  // Удаляем интерфейс, если используется Qt Designer
-
+    if (SecondWindowptr != nullptr) {
+        delete SecondWindowptr; // Освобождаем память при закрытии главного окна
+    }
     // Очистка остальных ресурсов, если это необходимо
     delete lengthInput;
     delete gravityInput;
@@ -174,7 +159,6 @@ MainWindow::~MainWindow()
     delete epsilonInput;
     delete stepControlCheckbox;
     delete calculateButton;
-    delete helpField;
     delete trajectoryPlot;
     delete phasePortraitPlot;
 }
@@ -275,8 +259,67 @@ void MainWindow::plotGraphs(const QString &outputFile)
 }
 
 
+bool MainWindow::validateInput() {
+    bool ok;
+
+    // Проверка, что длина является положительным числом с плавающей точкой
+    double length = lengthInput->text().toDouble(&ok);
+    if (!ok || length <= 0.0) {
+        QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для длины.");
+        return false;
+    }
+
+    // Проверка, что гравитация является числом с плавающей точкой
+    double gravity = gravityInput->text().toDouble(&ok);
+    if (!ok) {
+        QMessageBox::warning(this, "Некорректный ввод", "Введите допустимое число для гравитации.");
+        return false;
+    }
+
+    // Проверка, что масса является положительным числом с плавающей точкой
+    double mass = massInput->text().toDouble(&ok);
+    if (!ok || mass <= 0.0) {
+        QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для массы.");
+        return false;
+    }
+
+    // Проверка, что начальная угловая скорость является числом с плавающей точкой
+    double u0 = u0Input->text().toDouble(&ok);
+    if (!ok) {
+        QMessageBox::warning(this, "Некорректный ввод", "Введите допустимое число для начальной угловой скорости.");
+        return false;
+    }
+
+    // Проверка, что начальная угловое положение является числом с плавающей точкой
+    double v0 = v0Input->text().toDouble(&ok);
+    if (!ok) {
+        QMessageBox::warning(this, "Некорректный ввод", "Введите допустимое число для начального углового положения.");
+        return false;
+    }
+
+
+    // Проверка, что шаг является положительным числом с плавающей точкой
+    double step = stepInput->text().toDouble(&ok);
+    if (!ok || step <= 0.0) {
+        QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для шага.");
+        return false;
+    }
+
+    // Проверка, что epsilon является положительным числом с плавающей точкой
+    double epsilon = epsilonInput->text().toDouble(&ok);
+    if (!ok || epsilon <= 0.0) {
+        QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для Epsilon.");
+        return false;
+    }
+
+    return true;
+}
+
 void MainWindow::calculatePendulum()
 {
+    if (!validateInput()) {
+        return; // Если ввод некорректен, выходим из функции
+    }
     // Получение параметров из интерфейса
     double L = lengthInput->text().toDouble();
     double g = gravityInput->text().toDouble();
@@ -300,20 +343,30 @@ void MainWindow::calculatePendulum()
     if (useStepControl) {
         adaptiveRK4(y0, t0, t_end, dt, epsilon, g, L, outputFile.toStdString()); // Адаптивный шаг
     } else {
-        fixedStepRK4(y0, t0, t_end, dt, g, L, outputFile.toStdString()); // ФиксЙированный шаг
+        fixedStepRK4(y0, t0, t_end, dt, g, L, outputFile.toStdString()); // Фиксированный шаг
     }
+    if (SecondWindowptr == nullptr) {
+        SecondWindowptr = new secondwindow(nullptr); // Передаём nullptr вместо this
+        connect(SecondWindowptr, &secondwindow::destroyed, this, [this](){
+            SecondWindowptr = nullptr;
+        });
+    }
+    SecondWindowptr->show();
 
     // Построение графиков
     plotGraphs(outputFile);
 
-    helpField->setText("Расчёт завершён.\n"
-                       "L = " + QString::number(L) + " м\n" +
-                       "g = " + QString::number(g) + " м/с²\n" +
-                       "Начальный угол u₀ = " + QString::number(u0) + " рад\n" +
-                       "Начальная скорость v₀ = " + QString::number(v0) + " м/с\n" +
-                       "Шаг времени (dt) = " + QString::number(dt) + " с\n" +
-                       "Точность (эпсилон) = " + QString::number(epsilon) + "\n" +
-                       "Время расчёта = " + QString::number(t_end) + " с\n" +
-                       "Использован контроль шага: " + (useStepControl ? "Да" : "Нет") + "\n");
+    QString resultsText = "Расчёт завершён.\n"
+                          "L = " + QString::number(L) + " м\n" +
+                          "g = " + QString::number(g) + " м/с²\n" +
+                          "Начальный угол u₀ = " + QString::number(u0) + " рад\n" +
+                          "Начальная скорость v₀ = " + QString::number(v0) + " м/с\n" +
+                          "Шаг времени (dt) = " + QString::number(dt) + " с\n" +
+                          "Точность (эпсилон) = " + QString::number(epsilon) + "\n" +
+                          "Время расчёта = " + QString::number(t_end) + " с\n" +
+                          "Использован контроль шага: " + (useStepControl ? "Да" : "Нет") + "\n";
+
+    SecondWindowptr->setResultsText(resultsText); // Вызываем слот для установки текста
+    SecondWindowptr->show();
 
 }
