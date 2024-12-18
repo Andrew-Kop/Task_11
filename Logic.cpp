@@ -1,14 +1,24 @@
-#include <iostream>
 #include <vector>
 #include <cmath>
-#include <fstream>
-#include <iomanip>
 
+
+struct StepData {
+    int step;          // Номер шага
+    double t;          // Время
+    double vi;          // Численное решение v
+    double v2i;     // Решение с половинным шагом v
+    double diff;  //Vi-V2i
+    double error;      // Локальная ошибка (ОЛП)
+    double hi;          // Шаг
+    int C1; // количество делений шага
+    int C2; // количество удвоений шага
+};
 // Тип данных для вектора состояния
 using State = std::vector<double>;
 
 const double PI = 3.14159265358979323846;
 const int P = 4; // Порядок метода Рунге-Кутта
+
 
 State pendulumRHS(const State& y, double g, double L) {
     return {y[1], -g / L * sin(y[0])};
@@ -28,66 +38,67 @@ State rungeKuttaStep(const State& y, double h, double g, double L, State (*f)(co
 }
 
 // Функция численного решения с фиксированным шагом
-void fixedStepRK4(State y0, double t0, double t_end, double h, double g, double L, const std::string& output_file) {
-    std::ofstream out(output_file);
-    if (!out.is_open()) {
-        std::cerr << "Ошибка открытия файла для записи!" << std::endl;
-        return;
-    }
-
-    out << "t,u,v\n";
+std::vector<StepData> fixedStepRK4(State y0, double t0, double t_end, double h, double g, double L) {
+    std::vector<StepData> steps;
     double t = t0;
 
     while (t <= t_end) {
-        out << std::fixed << std::setprecision(6) << t << "," << y0[0] << "," << y0[1] << "\n";
         y0 = rungeKuttaStep(y0, h, g, L, pendulumRHS);
         t += h;
     }
 
-    out.close();
-    std::cout << "Результаты сохранены в файл: " << output_file << std::endl;
+    return steps;
 }
 
-void adaptiveRK4(State y0, double t0, double t_end, double h0, double epsilon, double g, double L, const std::string& output_file) {
-    std::ofstream out(output_file);
-    if (!out.is_open()) {
-        std::cerr << "Ошибка открытия файла для записи!" << std::endl;
-        return;
-    }
+std::vector<StepData> adaptiveRK4(State y0, double t0, double t_end, double h0, double epsilon, double g, double L) {
 
-    out << "t,u,v\n";
+    std::vector<StepData> steps;
     double t = t0;
     double h = h0;
 
-    while (t < t_end) {
-        out << std::fixed << std::setprecision(6) << t << "," << y0[0] << "," << y0[1] << "\n";
+    int C1 = 0; // Счетчик деления шага
+    int C2 = 0; // Счетчик удвоения шага
+    double max_error = 0.0; // Максимальная локальная ошибка
+    double max_h = h0, min_h = h0; // Максимальный и минимальный шаг
 
+    int step = 0;
+
+    while (t < t_end) {
+        step++;
         State y_full = rungeKuttaStep(y0, h, g, L, pendulumRHS);
         State y_half = rungeKuttaStep(y0, h / 2.0, g, L, pendulumRHS);
         State y_half2 = rungeKuttaStep(y_half, h / 2.0, g, L, pendulumRHS);
 
         double error = std::sqrt(std::pow(y_full[0] - y_half2[0], 2) + std::pow(y_full[1] - y_half2[1], 2)) / (std::pow(2, P) - 1);
 
+        max_error = std::max(max_error, error); // неправильный олп
+
+        steps.push_back({step, t, y_full[0], y_half2[0], y_full[0]-y_half2[0], error, h, C1, C2}); // не здесь push_back
+
         if (error <= epsilon) {
-            y0 = y_half2;
+            // Accept the step and potentially double the step size
+            y0 = y_full;
             t += h;
-            if (error < epsilon / 2.0) {
+            if (error <= epsilon / (2 * std::pow(2, P))) {
                 h *= 2.0;
+                C2++;
+                max_h = std::max(max_h, h);
             }
-        } else {
+        }
+        else {
             h /= 2.0;
+            C1++;
+            min_h = std::min(min_h, h);
         }
 
         if (t + h > t_end) {
             h = t_end - t;
         }
     }
-
-    out.close();
-    std::cout << "Результаты сохранены в файл: " << output_file << std::endl;
+    return steps;
 }
 
-double solvePendulum(double u0, double t_end, double g, double L) {
+double solvePendulum(double u0, double t_end, double g, double L) { // скорее всего не правильно, так как не принимаю значения шага
     State y = {u0, 0.0};
     double t = 0.0;
     double h = 0.01;
@@ -117,9 +128,4 @@ double findInitialCondition(double t_end, double target, double left, double rig
 
 double radiansToDegrees(double radians) {
     return radians * 180.0 / PI;
-}
-
-double calculate_time(int N, double L, double g = 9.81) {
-    double period = 2 * PI * sqrt(L / g);
-    return N * period;
 }

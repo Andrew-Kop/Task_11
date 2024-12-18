@@ -10,6 +10,7 @@
 #include "Logic.h"
 #include <QDebug>
 #include <QMessageBox>
+#include "secondwindow.h"
 
 // Константы
 const double PI = 3.141592653589793;
@@ -227,7 +228,6 @@ void MainWindow::plotGraphs(const QString &outputFile)
             QStringList fields = line.split(",");
 
             if (fields.size() >= 3) {
-                double u = fields[1].toDouble();
                 double v = fields[2].toDouble();
                 velocityData.append(v);
             }
@@ -336,25 +336,37 @@ void MainWindow::calculatePendulum()
     // Подготовка начального состояния
     State y0 = {u0, v0}; // Начальные значения u и v
     double t0 = 0.0;     // Начальное время
-    QString outputFile = "pendulum_output.csv";
-
-
+    //QString outputFile = "pendulum_output.csv";
+    std::vector<StepData> steps;
     // Запуск расчёта
     if (useStepControl) {
-        adaptiveRK4(y0, t0, t_end, dt, epsilon, g, L, outputFile.toStdString()); // Адаптивный шаг
+        steps = adaptiveRK4(y0, t0, t_end, dt, epsilon, g, L); // Адаптивный шаг
     } else {
-        fixedStepRK4(y0, t0, t_end, dt, g, L, outputFile.toStdString()); // Фиксированный шаг
+        steps = fixedStepRK4(y0, t0, t_end, dt, g, L); // Фиксированный шаг
     }
+
     if (SecondWindowptr == nullptr) {
-        SecondWindowptr = new secondwindow(nullptr); // Передаём nullptr вместо this
-        connect(SecondWindowptr, &secondwindow::destroyed, this, [this](){
-            SecondWindowptr = nullptr;
-        });
+        SecondWindowptr = new secondwindow();
+
+        // Используем локальный указатель для управления жизненным циклом окна
+        std::unique_ptr<secondwindow> windowPtr(SecondWindowptr);
+
+        connect(SecondWindowptr, &secondwindow::destroyed, this,
+                [this, steps, windowPtr = std::move(windowPtr)]() mutable {
+                    if (windowPtr) {
+                        windowPtr->fillTable(steps);  // Здесь используется копия steps
+                    }
+                    windowPtr.release(); // Освобождаем управление указателем
+                    SecondWindowptr = nullptr;
+                });
     }
-    SecondWindowptr->show();
+
+    SecondWindowptr->fillTable(steps);
+
+
 
     // Построение графиков
-    plotGraphs(outputFile);
+    //plotGraphs(outputFile);
 
     QString resultsText = "Расчёт завершён.\n"
                           "L = " + QString::number(L) + " м\n" +

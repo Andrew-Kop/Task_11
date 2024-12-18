@@ -2,6 +2,7 @@
 #include "ui_secondwindow.h"
 #include <QVBoxLayout>
 #include <QLabel>
+#include <QHeaderView>
 
 secondwindow::secondwindow(QWidget *parent)
     : QWidget(parent)
@@ -13,7 +14,6 @@ secondwindow::secondwindow(QWidget *parent)
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->addWidget(resultsTableMainTask);
     this->setLayout(layout);
-    this->resize(400, 300);
     resultsTextEdit = new QTextEdit(this); // Создаем QTextEdit
     resultsTextEdit->setReadOnly(true); // Только для чтения
     if(!layout)
@@ -40,6 +40,41 @@ void secondwindow::setResultsText(const QString& text)
 {
     resultsTextEdit->setText(text);
 }
+
+void secondwindow::fillTable(const std::vector<StepData>& steps) {
+    if (!resultsTableMainTask) { // Проверяем, что таблица инициализирована
+        qWarning() << "Table widget is not initialized!";
+        return;
+    }
+
+    // Устанавливаем количество строк и столбцов
+    resultsTableMainTask->setRowCount(steps.size());
+    resultsTableMainTask->setColumnCount(9); // Номер шага, t, Vi, V2i, Vi - V2i, ОЛП, h, C1, C2
+
+    // Устанавливаем заголовки столбцов
+    QStringList headers = {"i", "t", "Vi", "V2i", "Vi-V2i", "ОЛП", "h", "C1", "C2"};
+    resultsTableMainTask->setHorizontalHeaderLabels(headers);
+    resultsTableMainTask->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+
+    // Заполняем таблицу данными
+    for (size_t i = 0; i < steps.size(); ++i) {
+        resultsTableMainTask->setItem(i, 0, new QTableWidgetItem(QString::number(steps[i].step)));       // Номер шага
+        resultsTableMainTask->setItem(i, 1, new QTableWidgetItem(QString::number(steps[i].t, 'f', 6))); // Время t
+        resultsTableMainTask->setItem(i, 2, new QTableWidgetItem(QString::number(steps[i].vi, 'e', 6))); // Vi
+        resultsTableMainTask->setItem(i, 3, new QTableWidgetItem(QString::number(steps[i].v2i, 'e', 6))); // V2i
+        resultsTableMainTask->setItem(i, 4, new QTableWidgetItem(QString::number(steps[i].diff, 'e', 6))); // Разность Vi - V2i
+        resultsTableMainTask->setItem(i, 5, new QTableWidgetItem(QString::number(steps[i].error, 'e', 3))); // ОЛП (в экспоненциальной записи)
+        resultsTableMainTask->setItem(i, 6, new QTableWidgetItem(QString::number(steps[i].hi, 'f', 6))); // Шаг h
+        resultsTableMainTask->setItem(i, 7, new QTableWidgetItem(QString::number(steps[i].C1)));        // C1 (счётчик делений шага)
+        resultsTableMainTask->setItem(i, 8, new QTableWidgetItem(QString::number(steps[i].C2)));        // C2 (счётчик удвоений шага)
+    }
+
+    // Настройка отображения таблицы
+    resultsTableMainTask->resizeColumnsToContents();
+    resultsTableMainTask->resizeRowsToContents();
+    resultsTableMainTask->update();
+}
+
 
 secondwindow::~secondwindow()
 {
