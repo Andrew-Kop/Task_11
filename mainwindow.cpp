@@ -14,6 +14,8 @@
 
 // Константы
 const double PI = 3.141592653589793;
+double g = 9.8;
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -29,12 +31,6 @@ MainWindow::MainWindow(QWidget *parent)
     lengthInput = new QLineEdit(this);
     lengthInput->setPlaceholderText("Длина маятника (L)");
 
-    gravityInput = new QLineEdit(this);
-    gravityInput->setPlaceholderText("Ускорение свободного падения (g)");
-
-    massInput = new QLineEdit(this);
-    massInput->setPlaceholderText("Масса маятника (m)");
-
     u0Input = new QLineEdit(this);
     u0Input->setPlaceholderText("Начальный угол (u₀, рад)");
 
@@ -44,12 +40,17 @@ MainWindow::MainWindow(QWidget *parent)
     stepInput = new QLineEdit(this);
     stepInput->setPlaceholderText("Шаг dt");
 
+    bourdaryinput = new QLineEdit(this);
+    bourdaryinput->setPlaceholderText("Точность выхода на границу");
+
+    max_step = new QLineEdit(this);
+    max_step->setPlaceholderText("Максимальное количество шагов");
+
     epsilonInput = new QLineEdit(this);
     epsilonInput->setPlaceholderText("Эпсилон (точность)");
-    epsilonInput->setVisible(false); // По умолчанию скрыто
 
     // Чекбокс
-    stepControlCheckbox = new QCheckBox("Использовать контроль шага", this);
+   // stepControlCheckbox = new QCheckBox("Использовать контроль шага", this);
 
     // Кнопка "Рассчитать"
     calculateButton = new QPushButton("Рассчитать", this);
@@ -75,14 +76,13 @@ MainWindow::MainWindow(QWidget *parent)
     QGridLayout *inputLayout = new QGridLayout();
 
     inputLayout->addWidget(lengthInput, 0, 0);
-    inputLayout->addWidget(gravityInput, 0, 1);
-    inputLayout->addWidget(massInput, 0, 2);
+    inputLayout->addWidget(bourdaryinput, 0, 1);
+    inputLayout->addWidget(max_step, 0, 2);
     inputLayout->addWidget(u0Input, 1, 0);
     inputLayout->addWidget(v0Input, 1, 1);
     inputLayout->addWidget(timeInput, 1, 2);
     inputLayout->addWidget(stepInput, 2, 0);
-    inputLayout->addWidget(epsilonInput, 2, 2);
-    inputLayout->addWidget(stepControlCheckbox, 2, 1);
+    inputLayout->addWidget(epsilonInput, 2, 1);
     inputLayout->addWidget(calculateButton, 3, 0, 1, 3);
 
     mainLayout->addLayout(inputLayout);
@@ -93,10 +93,8 @@ MainWindow::MainWindow(QWidget *parent)
     centralWidget->setLayout(mainLayout);
     setCentralWidget(centralWidget);
 
-
     // Подключение сигналов
     connect(calculateButton, &QPushButton::clicked, this, &MainWindow::calculatePendulum);
-    connect(stepControlCheckbox, &QCheckBox::toggled, this, &MainWindow::toggleEpsilonInput);
 
     // Применение стилей
     applyStyles();
@@ -135,13 +133,6 @@ void MainWindow::applyStyles()
 
 }
 
-void MainWindow::toggleEpsilonInput(bool checked)
-{
-    epsilonInput->setVisible(checked);
-}
-
-
-
 MainWindow::~MainWindow()
 {
     // Очистка динамически выделенных ресурсов
@@ -151,17 +142,16 @@ MainWindow::~MainWindow()
     }
     // Очистка остальных ресурсов, если это необходимо
     delete lengthInput;
-    delete gravityInput;
-    delete massInput;
     delete u0Input;
     delete v0Input;
     delete timeInput;
     delete stepInput;
     delete epsilonInput;
-    delete stepControlCheckbox;
     delete calculateButton;
     delete trajectoryPlot;
     delete phasePortraitPlot;
+    delete max_step;
+    delete bourdaryinput;
 }
 
 void MainWindow::plotGraphs(const QString &outputFile)
@@ -262,55 +252,81 @@ void MainWindow::plotGraphs(const QString &outputFile)
 bool MainWindow::validateInput() {
     bool ok;
 
-    // Проверка, что длина является положительным числом с плавающей точкой
-    double length = lengthInput->text().toDouble(&ok);
-    if (!ok || length <= 0.0) {
-        QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для длины.");
-        return false;
+    // Проверка длины (L)
+    double length;
+    QString length_text = lengthInput->text();
+    if(length_text.isEmpty()){
+        length = 0.1;
+    }
+    else{
+        length = lengthInput->text().toDouble(&ok);
+        if (!ok || length <= 0.0) {
+            QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для длины.");
+            return false;
+        }
     }
 
-    // Проверка, что гравитация является числом с плавающей точкой
-    double gravity = gravityInput->text().toDouble(&ok);
-    if (!ok) {
-        QMessageBox::warning(this, "Некорректный ввод", "Введите допустимое число для гравитации.");
-        return false;
+    // Проверка начальной угловой скорости (u0) с учетом значения по умолчанию
+    double u0;
+    QString u0_text = u0Input->text();
+    if (u0_text.isEmpty()) {
+        u0 = 0.0; // Значение по умолчанию (например, 0)
+    } else {
+        u0 = u0Input->text().toDouble(&ok);
+        if (!ok) {
+            QMessageBox::warning(this, "Некорректный ввод", "Введите допустимое число для начальной угловой скорости.");
+            return false;
+        }
     }
 
-    // Проверка, что масса является положительным числом с плавающей точкой
-    double mass = massInput->text().toDouble(&ok);
-    if (!ok || mass <= 0.0) {
-        QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для массы.");
-        return false;
+    // Проверка начального углового положения (v0) с учетом значения по умолчанию
+    double v0;
+    QString v0_text = v0Input->text();
+    if (v0_text.isEmpty()) {
+        v0 = 0.0; // Значение по умолчанию (например, 0)
+    } else {
+        v0 = v0Input->text().toDouble(&ok);
+        if (!ok) {
+            QMessageBox::warning(this, "Некорректный ввод", "Введите допустимое число для начального углового положения.");
+            return false;
+        }
     }
 
-    // Проверка, что начальная угловая скорость является числом с плавающей точкой
-    double u0 = u0Input->text().toDouble(&ok);
-    if (!ok) {
-        QMessageBox::warning(this, "Некорректный ввод", "Введите допустимое число для начальной угловой скорости.");
-        return false;
-    }
-
-    // Проверка, что начальная угловое положение является числом с плавающей точкой
-    double v0 = v0Input->text().toDouble(&ok);
-    if (!ok) {
-        QMessageBox::warning(this, "Некорректный ввод", "Введите допустимое число для начального углового положения.");
-        return false;
-    }
-
-
-    // Проверка, что шаг является положительным числом с плавающей точкой
+    // Проверка шага (dt)
     double step = stepInput->text().toDouble(&ok);
     if (!ok || step <= 0.0) {
         QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для шага.");
         return false;
     }
 
-    // Проверка, что epsilon является положительным числом с плавающей точкой
+    // Проверка epsilon
     double epsilon = epsilonInput->text().toDouble(&ok);
     if (!ok || epsilon <= 0.0) {
         QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для Epsilon.");
         return false;
     }
+
+    // Проверка времени расчета (t_end)
+    double time = timeInput->text().toDouble(&ok);
+    if (!ok || time <= 0.0) {
+        QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для времени расчета.");
+        return false;
+    }
+
+    // Проверка границы (bourdaryinput)
+    double bourdary = bourdaryinput->text().toDouble(&ok);
+    if (!ok || bourdary <= 0.0) { // Граница может быть и отрицательной, поэтому проверяем только на корректность ввода числа
+        QMessageBox::warning(this, "Некорректный ввод", "Введите допустимое число для границы.");
+        return false;
+    }
+
+    // Проверка максимального шага (max_step)
+    int maxSteps = max_step->text().toInt(&ok); // Используем toInt() для целого числа
+    if (!ok || maxSteps < 0 || maxSteps == std::numeric_limits<int>::max() ) { // Проверка на неотрицательность и переполнение
+        QMessageBox::warning(this, "Некорректный ввод", "Введите неотрицательное целое число для максимального количества шагов.");
+        return false;
+    }
+
 
     return true;
 }
@@ -322,10 +338,8 @@ void MainWindow::calculatePendulum()
     }
     // Получение параметров из интерфейса
     double L = lengthInput->text().toDouble();
-    double g = gravityInput->text().toDouble();
     double u0 = u0Input->text().toDouble();
     double v0 = v0Input->text().toDouble();
-    bool useStepControl = stepControlCheckbox->isChecked();
 
     double dt = stepInput->text().toDouble();
     double epsilon = epsilonInput->text().toDouble();
@@ -336,32 +350,20 @@ void MainWindow::calculatePendulum()
     // Подготовка начального состояния
     State y0 = {u0, v0}; // Начальные значения u и v
     double t0 = 0.0;     // Начальное время
-    //QString outputFile = "pendulum_output.csv";
-    std::vector<StepData> steps;
-    // Запуск расчёта
-    if (useStepControl) {
-        steps = adaptiveRK4(y0, t0, t_end, dt, epsilon, g, L); // Адаптивный шаг
-    } else {
-        steps = fixedStepRK4(y0, t0, t_end, dt, g, L); // Фиксированный шаг
-    }
+    std::vector<StepData> steps = adaptiveRK4(y0, t0, t_end, dt, epsilon, g, L);
 
     if (SecondWindowptr == nullptr) {
         SecondWindowptr = new secondwindow();
 
-        // Используем локальный указатель для управления жизненным циклом окна
-        std::unique_ptr<secondwindow> windowPtr(SecondWindowptr);
-
-        connect(SecondWindowptr, &secondwindow::destroyed, this,
-                [this, steps, windowPtr = std::move(windowPtr)]() mutable {
-                    if (windowPtr) {
-                        windowPtr->fillTable(steps);  // Здесь используется копия steps
-                    }
-                    windowPtr.release(); // Освобождаем управление указателем
-                    SecondWindowptr = nullptr;
-                });
+        // Создаём соединение для освобождения указателя на второе окно
+        connect(SecondWindowptr, &secondwindow::destroyed, this, [this]() {
+            SecondWindowptr = nullptr;
+        });
     }
 
+    // Передаём данные для заполнения таблицы
     SecondWindowptr->fillTable(steps);
+    SecondWindowptr->show();
 
 
 
@@ -376,9 +378,10 @@ void MainWindow::calculatePendulum()
                           "Шаг времени (dt) = " + QString::number(dt) + " с\n" +
                           "Точность (эпсилон) = " + QString::number(epsilon) + "\n" +
                           "Время расчёта = " + QString::number(t_end) + " с\n" +
-                          "Использован контроль шага: " + (useStepControl ? "Да" : "Нет") + "\n";
+                          "Использован контроль шага";
 
     SecondWindowptr->setResultsText(resultsText); // Вызываем слот для установки текста
     SecondWindowptr->show();
 
 }
+

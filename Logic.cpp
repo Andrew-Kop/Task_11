@@ -38,10 +38,12 @@ State rungeKuttaStep(const State& y, double h, double g, double L, State (*f)(co
 }
 
 // Функция численного решения с фиксированным шагом
+/*
 std::vector<StepData> fixedStepRK4(State y0, double t0, double t_end, double h, double g, double L) {
     std::vector<StepData> steps;
     double t = t0;
 
+    steps.push_back({step, t, y0[0], y_half2[0], y_full[0]-y_half2[0], error, h, 0, 0});
     while (t <= t_end) {
         y0 = rungeKuttaStep(y0, h, g, L, pendulumRHS);
         t += h;
@@ -49,7 +51,7 @@ std::vector<StepData> fixedStepRK4(State y0, double t0, double t_end, double h, 
 
     return steps;
 }
-
+*/
 std::vector<StepData> adaptiveRK4(State y0, double t0, double t_end, double h0, double epsilon, double g, double L) {
 
     std::vector<StepData> steps;

@@ -27,20 +27,16 @@ private:
     secondwindow *SecondWindowptr;
     // Поля ввода
     QLineEdit *lengthInput;
-    QLineEdit *gravityInput;
-    QLineEdit *massInput;
     QLineEdit *u0Input;
     QLineEdit *v0Input;
     QLineEdit *stepInput;
     QLineEdit *epsilonInput;
-    QLineEdit *timeInput;             // Поле для ввода времени
-
+    QLineEdit *bourdaryinput;
+    QLineEdit *timeInput;        // Поле для ввода времени
+    QLineEdit *max_step;
 
     // Кнопка "Рассчитать"
     QPushButton *calculateButton;
-
-    // Чекбокс
-    QCheckBox *stepControlCheckbox;
 
     // Графики
     QCustomPlot *trajectoryPlot;
@@ -48,12 +44,12 @@ private:
 
     // Функции для отображения и расчёта
     void applyStyles();
-    void toggleEpsilonInput(bool checked);
     void toggleTimeOrCycles();
 
     void calculatePendulum();
     bool validateInput();
     void plotGraphs(const QString &outputFile);
+    void handleSecondWindowDestroyed(std::vector<StepData> steps, std::unique_ptr<secondwindow> windowPtr);
 
 };
 
