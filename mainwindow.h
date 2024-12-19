@@ -10,6 +10,18 @@
 #include <QCustomPlot.h>
 #include "secondwindow.h"
 
+struct InputData {
+    double length;
+    double u0;
+    double v0;
+    double h0; // h0 - начальный шаг
+    double epsilon;
+    double time;
+    double boundary;
+    int maxSteps;
+};
+
+
 namespace Ui {
 class MainWindow;
 }
@@ -40,6 +52,7 @@ private:
 
     // Графики
     QCustomPlot *trajectoryPlot;
+    QCustomPlot *speedtrajectoryPlot;
     QCustomPlot *phasePortraitPlot;
 
     // Функции для отображения и расчёта
@@ -47,9 +60,11 @@ private:
     void toggleTimeOrCycles();
 
     void calculatePendulum();
-    bool validateInput();
+    bool validateInput(InputData& data);
     void plotGraphs(const QString &outputFile);
     void handleSecondWindowDestroyed(std::vector<StepData> steps, std::unique_ptr<secondwindow> windowPtr);
+    void plotGraph(QCustomPlot* plot, const QVector<double>& xData, const QVector<double>& yData, const QString& xAxisLabel, const QString& yAxisLabel);
+    void plotGraphs(const std::vector<StepData>& steps);
 
 };
 

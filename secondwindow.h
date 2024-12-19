@@ -8,9 +8,12 @@
 struct StepData {
     int step;          // Номер шага
     double t;          // Время
-    double vi;          // Численное решение v
-    double v2i;     // Решение с половинным шагом v
-    double diff;  //Vi-V2i
+    double v11i;          // Численное решение v по первой компоненте
+    double v1_2i;
+    double v21i;     // Решение с половинным шагом v
+    double v2_2i;
+    double diff1;  //V11i-V1_2i
+    double diff2; //v21i-v2_2i
     double error;      // Локальная ошибка (ОЛП)
     double hi;          // Шаг
     int C1; // количество делений шага

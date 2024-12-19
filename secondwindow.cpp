@@ -9,7 +9,9 @@ secondwindow::secondwindow(QWidget *parent)
     , ui(new Ui::secondwindow)
 {
     ui->setupUi(this);
-    this->setWindowTitle("Второе окно");  // Добавьте заголовок окна
+    this->setWindowTitle("Необходимая информация");  // Добавьте заголовок окна
+    setWindowIcon(QIcon(":/icons/icons/icon.png"));
+
     resultsTableMainTask = new QTableWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->addWidget(resultsTableMainTask);
@@ -49,24 +51,27 @@ void secondwindow::fillTable(const std::vector<StepData>& steps) {
 
     // Устанавливаем количество строк и столбцов
     resultsTableMainTask->setRowCount(steps.size());
-    resultsTableMainTask->setColumnCount(9); // Номер шага, t, Vi, V2i, Vi - V2i, ОЛП, h, C1, C2
+    resultsTableMainTask->setColumnCount(12); // Номер шага, t, Vi, V2i, Vi - V2i, ОЛП, h, C1, C2
 
     // Устанавливаем заголовки столбцов
-    QStringList headers = {"i", "t", "Vi", "V2i", "Vi-V2i", "ОЛП", "h", "C1", "C2"};
+    QStringList headers = {"i", "t", "V11i", "V1_2i", "|V11i-V1_2i|", "V21i", "V2_2i", "|V21i-V2_2i|", "ОЛП", "h", "C1", "C2"};
     resultsTableMainTask->setHorizontalHeaderLabels(headers);
     resultsTableMainTask->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
     // Заполняем таблицу данными
     for (size_t i = 0; i < steps.size(); ++i) {
         resultsTableMainTask->setItem(i, 0, new QTableWidgetItem(QString::number(steps[i].step)));       // Номер шага
-        resultsTableMainTask->setItem(i, 1, new QTableWidgetItem(QString::number(steps[i].t, 'f', 6))); // Время t
-        resultsTableMainTask->setItem(i, 2, new QTableWidgetItem(QString::number(steps[i].vi, 'e', 6))); // Vi
-        resultsTableMainTask->setItem(i, 3, new QTableWidgetItem(QString::number(steps[i].v2i, 'e', 6))); // V2i
-        resultsTableMainTask->setItem(i, 4, new QTableWidgetItem(QString::number(steps[i].diff, 'e', 6))); // Разность Vi - V2i
-        resultsTableMainTask->setItem(i, 5, new QTableWidgetItem(QString::number(steps[i].error, 'e', 3))); // ОЛП (в экспоненциальной записи)
-        resultsTableMainTask->setItem(i, 6, new QTableWidgetItem(QString::number(steps[i].hi, 'f', 6))); // Шаг h
-        resultsTableMainTask->setItem(i, 7, new QTableWidgetItem(QString::number(steps[i].C1)));        // C1 (счётчик делений шага)
-        resultsTableMainTask->setItem(i, 8, new QTableWidgetItem(QString::number(steps[i].C2)));        // C2 (счётчик удвоений шага)
+        resultsTableMainTask->setItem(i, 1, new QTableWidgetItem(QString::number(steps[i].t, 'f', 4))); // Время t
+        resultsTableMainTask->setItem(i, 2, new QTableWidgetItem(QString::number(steps[i].v11i, 'e', 6))); // Vi
+        resultsTableMainTask->setItem(i, 3, new QTableWidgetItem(QString::number(steps[i].v1_2i, 'e', 6))); // V2i
+        resultsTableMainTask->setItem(i, 4, new QTableWidgetItem(QString::number(steps[i].diff1, 'e', 6))); // Разность Vi - V2i
+        resultsTableMainTask->setItem(i, 5, new QTableWidgetItem(QString::number(steps[i].v21i, 'e', 3)));
+        resultsTableMainTask->setItem(i, 6, new QTableWidgetItem(QString::number(steps[i].v2_2i, 'e', 6))); // Шаг h
+        resultsTableMainTask->setItem(i, 7, new QTableWidgetItem(QString::number(steps[i].diff2, 'e', 6)));        // C1 (счётчик делений шага)
+        resultsTableMainTask->setItem(i, 8, new QTableWidgetItem(QString::number(steps[i].error, 'e', 6)));        // C2 (счётчик удвоений шага)
+        resultsTableMainTask->setItem(i, 9, new QTableWidgetItem(QString::number(steps[i].hi)));
+        resultsTableMainTask->setItem(i, 10, new QTableWidgetItem(QString::number(steps[i].C1)));
+        resultsTableMainTask->setItem(i, 11, new QTableWidgetItem(QString::number(steps[i].C2)));
     }
 
     // Настройка отображения таблицы

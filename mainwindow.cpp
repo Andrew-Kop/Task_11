@@ -13,9 +13,7 @@
 #include "secondwindow.h"
 
 // Константы
-const double PI = 3.141592653589793;
 double g = 9.8;
-
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -154,203 +152,180 @@ MainWindow::~MainWindow()
     delete bourdaryinput;
 }
 
-void MainWindow::plotGraphs(const QString &outputFile)
+void MainWindow::plotGraphs(const std::vector<StepData>& steps)
 {
-    // Здесь нужно реализовать логику построения графиков.
-    // Пример:
+    QVector<double> timeData, angleData, velocityData;
 
-    QVector<double> timeData, angleData;
-
-    // Чтение данных из файла (вы можете адаптировать в зависимости от вашего формата данных)
-    QFile file(outputFile);
-    if (file.open(QIODevice::ReadOnly)) {
-        QTextStream in(&file);
-        in.readLine();  // Пропускаем заголовок
-
-        while (!in.atEnd()) {
-            QString line = in.readLine();
-            QStringList fields = line.split(",");
-
-            if (fields.size() >= 2) {
-                double t = fields[0].toDouble();
-                double u = fields[1].toDouble();
-                timeData.append(t);
-                angleData.append(u);
-            }
-        }
-        file.close();
+    for (const auto& stepData : steps) {
+        timeData.append(stepData.t);
+        angleData.append(stepData.v11i);
+        velocityData.append(stepData.v21i);
     }
 
     // Построение графика угла как функции времени
-    trajectoryPlot->clearGraphs();  // Очищаем старые графики
-    trajectoryPlot->addGraph();
-    trajectoryPlot->graph(0)->setData(timeData, angleData);
+    plotGraph(trajectoryPlot, timeData, angleData, "Время (с)", "Угол u(t), рад");
 
-    // Подстраиваем оси под данные
-    double timeMin = *std::min_element(timeData.begin(), timeData.end());
-    double timeMax = *std::max_element(timeData.begin(), timeData.end());
-    double angleMin = *std::min_element(angleData.begin(), angleData.end());
-    double angleMax = *std::max_element(angleData.begin(), angleData.end());
+    // Построение графика скорости как функции времени
+    plotGraph(speedtrajectoryPlot, timeData, velocityData, "Время (с)", "Скорость v(t), рад/с");
 
-    // Добавление небольших отступов
-    double timePadding = (timeMax - timeMin) * 0.05;  // 5% от максимального диапазона времени
-    double anglePadding = (angleMax - angleMin) * 0.05;  // 5% от максимального диапазона угла
-
-    trajectoryPlot->xAxis->setRange(timeMin - timePadding, timeMax + timePadding);
-    trajectoryPlot->yAxis->setRange(angleMin - anglePadding, angleMax + anglePadding);
-
-    trajectoryPlot->xAxis->setTickLabelPadding(0);  // Уменьшаем отступы для меток
-    trajectoryPlot->yAxis->setTickLabelPadding(0);  // Уменьшаем отступы для меток
-    trajectoryPlot->xAxis->setLabelPadding(0);      // Убираем отступы для подписи оси X
-    trajectoryPlot->yAxis->setLabelPadding(0);      // Убираем отступы для подписи оси Y
-
-    trajectoryPlot->replot();
-
-    // Для фазового портрета (скорость как функция угла)
-    QVector<double> velocityData;
-    QFile file2(outputFile);  // Используем тот же файл для фазового портрета
-    if (file2.open(QIODevice::ReadOnly)) {
-        QTextStream in2(&file2);
-        in2.readLine();  // Пропускаем заголовок
-
-        while (!in2.atEnd()) {
-            QString line = in2.readLine();
-            QStringList fields = line.split(",");
-
-            if (fields.size() >= 3) {
-                double v = fields[2].toDouble();
-                velocityData.append(v);
-            }
-        }
-        file2.close();
-    }
-
-    // Построение фазового портрета
-    phasePortraitPlot->clearGraphs();  // Очищаем старые графики
-    phasePortraitPlot->addGraph();
-    phasePortraitPlot->graph(0)->setData(angleData, velocityData);
-
-    // Подстраиваем оси для фазового портрета
-    double velocityMin = *std::min_element(velocityData.begin(), velocityData.end());
-    double velocityMax = *std::max_element(velocityData.begin(), velocityData.end());
-
-    // Добавление небольших отступов
-    double velocityPadding = (velocityMax - velocityMin) * 0.05;  // 5% от максимального диапазона скорости
-
-    phasePortraitPlot->xAxis->setRange(angleMin - anglePadding, angleMax + anglePadding);
-    phasePortraitPlot->yAxis->setRange(velocityMin - velocityPadding, velocityMax + velocityPadding);
-
-    phasePortraitPlot->xAxis->setTickLabelPadding(0);  // Уменьшаем отступы для меток
-    phasePortraitPlot->yAxis->setTickLabelPadding(0);  // Уменьшаем отступы для меток
-    phasePortraitPlot->xAxis->setLabelPadding(0);      // Убираем отступы для подписи оси X
-    phasePortraitPlot->yAxis->setLabelPadding(0);      // Убираем отступы для подписи оси Y
-
-    phasePortraitPlot->replot();
+    // Построение фазового портрета (скорость как функция угла)
+    plotGraph(phasePortraitPlot, angleData, velocityData, "Угол u(t), рад", "Скорость v(t), рад/с");
 }
 
+void MainWindow::plotGraph(QCustomPlot* plot, const QVector<double>& xData, const QVector<double>& yData, const QString& xAxisLabel, const QString& yAxisLabel)
+{
+    if (xData.isEmpty() || yData.isEmpty()) {
+        qDebug() << "Error: Empty data for plotting.";
+        return;
+    }
 
-bool MainWindow::validateInput() {
+    plot->clearGraphs();
+    plot->addGraph();
+    plot->graph(0)->setData(xData, yData);
+
+    double xMin = *std::min_element(xData.begin(), xData.end());
+    double xMax = *std::max_element(xData.begin(), xData.end());
+    double yMin = *std::min_element(yData.begin(), yData.end());
+    double yMax = *std::max_element(yData.begin(), yData.end());
+
+    double xPadding = (xMax - xMin) * 0.05;
+    double yPadding = (yMax - yMin) * 0.05;
+
+    plot->xAxis->setRange(xMin - xPadding, xMax + xPadding);
+    plot->yAxis->setRange(yMin - yPadding, yMax + yPadding);
+
+    plot->xAxis->setLabel(xAxisLabel);
+    plot->yAxis->setLabel(yAxisLabel);
+
+    plot->xAxis->setTickLabelPadding(0);
+    plot->yAxis->setTickLabelPadding(0);
+    plot->xAxis->setLabelPadding(0);
+    plot->yAxis->setLabelPadding(0);
+
+    plot->replot();
+}
+
+bool MainWindow::validateInput(InputData& data) {
     bool ok;
 
     // Проверка длины (L)
-    double length;
     QString length_text = lengthInput->text();
-    if(length_text.isEmpty()){
-        length = 0.1;
-    }
-    else{
-        length = lengthInput->text().toDouble(&ok);
-        if (!ok || length <= 0.0) {
+    if (length_text.isEmpty()) {
+        data.length = 0.1;
+    } else {
+        data.length = lengthInput->text().toDouble(&ok);
+        if (!ok || data.length <= 0.0) {
             QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для длины.");
             return false;
         }
     }
 
-    // Проверка начальной угловой скорости (u0) с учетом значения по умолчанию
-    double u0;
+    // Проверка начального угла (u0)
     QString u0_text = u0Input->text();
     if (u0_text.isEmpty()) {
-        u0 = 0.0; // Значение по умолчанию (например, 0)
+        data.u0 = 0.314;
     } else {
-        u0 = u0Input->text().toDouble(&ok);
+        data.u0 = u0Input->text().toDouble(&ok);
+        if (!ok) {
+            QMessageBox::warning(this, "Некорректный ввод", "Введите допустимое число для начального угла.");
+            return false;
+        }
+    }
+
+    // Проверка начальной угловой скорости (v0)
+    QString v0_text = v0Input->text();
+    if (v0_text.isEmpty()) {
+        data.v0 = 0.0;
+    } else {
+        data.v0 = v0Input->text().toDouble(&ok);
         if (!ok) {
             QMessageBox::warning(this, "Некорректный ввод", "Введите допустимое число для начальной угловой скорости.");
             return false;
         }
     }
 
-    // Проверка начального углового положения (v0) с учетом значения по умолчанию
-    double v0;
-    QString v0_text = v0Input->text();
-    if (v0_text.isEmpty()) {
-        v0 = 0.0; // Значение по умолчанию (например, 0)
+    // Проверка шага (h0)
+    QString step_text = stepInput->text();
+    if (step_text.isEmpty()) {
+        data.h0 = 0.001;
     } else {
-        v0 = v0Input->text().toDouble(&ok);
-        if (!ok) {
-            QMessageBox::warning(this, "Некорректный ввод", "Введите допустимое число для начального углового положения.");
+        data.h0 = stepInput->text().toDouble(&ok);
+        if (!ok || data.h0 <= 0.0) {
+            QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для начального шага.");
             return false;
         }
     }
 
-    // Проверка шага (dt)
-    double step = stepInput->text().toDouble(&ok);
-    if (!ok || step <= 0.0) {
-        QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для шага.");
-        return false;
-    }
-
     // Проверка epsilon
-    double epsilon = epsilonInput->text().toDouble(&ok);
-    if (!ok || epsilon <= 0.0) {
-        QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для Epsilon.");
-        return false;
+    QString epsilon_text = epsilonInput->text();
+    if (epsilon_text.isEmpty()) {
+        data.epsilon = 1e-5;
+    } else {
+        data.epsilon = epsilonInput->text().toDouble(&ok);
+        if (!ok || data.epsilon <= 0.0) {
+            QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для Epsilon.");
+            return false;
+        }
     }
 
     // Проверка времени расчета (t_end)
-    double time = timeInput->text().toDouble(&ok);
-    if (!ok || time <= 0.0) {
-        QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для времени расчета.");
-        return false;
+    QString time_text = timeInput->text();
+    if (time_text.isEmpty()) {
+        data.time = 10.0;
+    } else {
+        data.time = timeInput->text().toDouble(&ok);
+        if (!ok || data.time <= 0.0) {
+            QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для времени расчета.");
+            return false;
+        }
     }
 
-    // Проверка границы (bourdaryinput)
-    double bourdary = bourdaryinput->text().toDouble(&ok);
-    if (!ok || bourdary <= 0.0) { // Граница может быть и отрицательной, поэтому проверяем только на корректность ввода числа
-        QMessageBox::warning(this, "Некорректный ввод", "Введите допустимое число для границы.");
-        return false;
+    // Проверка границы (boundary_epsilon)
+    QString bourdary_text = bourdaryinput->text();
+    if (bourdary_text.isEmpty()) {
+        data.boundary = 1e-8;
+    } else {
+        data.boundary = bourdaryinput->text().toDouble(&ok);
+        if (!ok || data.boundary <= 0.0) {
+            QMessageBox::warning(this, "Некорректный ввод", "Введите положительное число для границы.");
+            return false;
+        }
     }
 
-    // Проверка максимального шага (max_step)
-    int maxSteps = max_step->text().toInt(&ok); // Используем toInt() для целого числа
-    if (!ok || maxSteps < 0 || maxSteps == std::numeric_limits<int>::max() ) { // Проверка на неотрицательность и переполнение
-        QMessageBox::warning(this, "Некорректный ввод", "Введите неотрицательное целое число для максимального количества шагов.");
-        return false;
+    // Проверка максимального шага (max_steps)
+    QString max_step_text = max_step->text();
+    if (max_step_text.isEmpty()) {
+        data.maxSteps = 3000;
+    } else {
+        data.maxSteps = max_step->text().toInt(&ok);
+        if (!ok || data.maxSteps < 0 || data.maxSteps == std::numeric_limits<int>::max()) {
+            QMessageBox::warning(this, "Некорректный ввод", "Введите неотрицательное целое число для максимального количества шагов.");
+            return false;
+        }
     }
-
 
     return true;
 }
 
 void MainWindow::calculatePendulum()
 {
-    if (!validateInput()) {
+    InputData inputData;
+    if (!validateInput(inputData)) {
         return; // Если ввод некорректен, выходим из функции
     }
-    // Получение параметров из интерфейса
-    double L = lengthInput->text().toDouble();
-    double u0 = u0Input->text().toDouble();
-    double v0 = v0Input->text().toDouble();
-
-    double dt = stepInput->text().toDouble();
-    double epsilon = epsilonInput->text().toDouble();
-
-    // Логика выбора времени расчёта или количества циклов
-    double t_end = timeInput->text().toDouble();
+    double L = inputData.length;
+    double u0 = inputData.u0;
+    double v0 = inputData.v0;
+    double dt = inputData.h0;
+    double epsilon = inputData.epsilon;
+    double t_end = inputData.time;
+    double bourdary = inputData.boundary;
+    int  step_max = inputData.maxSteps;
 
     // Подготовка начального состояния
     State y0 = {u0, v0}; // Начальные значения u и v
     double t0 = 0.0;     // Начальное время
-    std::vector<StepData> steps = adaptiveRK4(y0, t0, t_end, dt, epsilon, g, L);
+    std::pair<std::vector<StepData>, RK4Params> result = adaptiveRK4(y0, t0, t_end, dt, epsilon, g, L, step_max, bourdary);
 
     if (SecondWindowptr == nullptr) {
         SecondWindowptr = new secondwindow();
@@ -362,7 +337,7 @@ void MainWindow::calculatePendulum()
     }
 
     // Передаём данные для заполнения таблицы
-    SecondWindowptr->fillTable(steps);
+    SecondWindowptr->fillTable(result.first);
     SecondWindowptr->show();
 
 
@@ -371,14 +346,30 @@ void MainWindow::calculatePendulum()
     //plotGraphs(outputFile);
 
     QString resultsText = "Расчёт завершён.\n"
-                          "L = " + QString::number(L) + " м\n" +
-                          "g = " + QString::number(g) + " м/с²\n" +
-                          "Начальный угол u₀ = " + QString::number(u0) + " рад\n" +
-                          "Начальная скорость v₀ = " + QString::number(v0) + " м/с\n" +
-                          "Шаг времени (dt) = " + QString::number(dt) + " с\n" +
-                          "Точность (эпсилон) = " + QString::number(epsilon) + "\n" +
-                          "Время расчёта = " + QString::number(t_end) + " с\n" +
-                          "Использован контроль шага";
+                          "L = " + QString::number(L) + " м\n"
+                                                 "g = " + QString::number(g) + " м/с²\n"
+                                                 "Начальный угол u₀ = " + QString::number(u0) + " рад\n"
+                                                  "Начальная скорость v₀ = " + QString::number(v0) + " м/с\n"
+                                                  "Начальный шаг времени (dt) = " + QString::number(dt) + " с\n"
+                                                  "Точность (эпсилон) = " + QString::number(epsilon) + "\n"
+                                                       "Время расчёта = " + QString::number(t_end) + " с\n"
+                                                     "Максимальное количество шагов: " + QString::number(step_max) + "\n" // Добавлено
+                                                        "Точность выхода на границу: " + QString::number(bourdary) + "\n" // Добавлено
+                                                        "Использован адаптивный контроль шага\n"
+                                                        "------------------------------------\n"
+                                                        "Параметры адаптивного метода:\n"
+                                                        "Количество делений шага (C1): " + QString::number(result.second.C1) + "\n"
+                                                                "Количество удвоений шага (C2): " + QString::number(result.second.C2) + "\n"
+                                                                "Максимальный шаг: " + QString::number(result.second.max_h) + " с\n"
+                                                                   "Минимальный шаг: " + QString::number(result.second.min_h) + " с\n"
+                                                                   "Общее количество шагов: " + QString::number(result.second.num_steps) + "\n"
+                                                                       "Максимальная локальная ошибка (max error): " + QString::number(result.second.max_error) + "\n"
+                                                                       "Максимальный |V11i-V1_2i|: " + QString::number(result.second.max_diff1) + " (на шаге " + QString::number(result.second.max_diff1_step) + ")\n"
+                                                                                                                                      "Минимальный |V11i-V1_2i|: " + QString::number(result.second.min_diff1) + " (на шаге " + QString::number(result.second.min_diff1_step) + ")\n"
+                                                                                                                                      "Максимальная |V21i-V2_2i|: " + QString::number(result.second.max_diff2) + " (на шаге " + QString::number(result.second.max_diff2_step) + ")\n"
+                                                                                                                                      "Минимальная |V21i-V2_2i|: " + QString::number(result.second.min_diff2) + " (на шаге " + QString::number(result.second.min_diff2_step) + ")\n";
+
+
 
     SecondWindowptr->setResultsText(resultsText); // Вызываем слот для установки текста
     SecondWindowptr->show();
