@@ -41,10 +41,14 @@ using State = std::vector<double>;
 
 const double PI = 3.14159265358979323846;
 const int P = 4; // Порядок метода Рунге-Кутта
-
-
+/*
 State pendulumRHS(const State& y, double g, double L) {
     return {y[1], -g / L * sin(y[0])};
+}
+*/
+
+State pendulumRHS(const State& y, double g, double L) {
+    return {y[1], -g / L * y[0]};
 }
 
 // Метод Рунге-Кутта 4-го порядка

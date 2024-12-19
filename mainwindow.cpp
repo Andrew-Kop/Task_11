@@ -55,12 +55,17 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Графики
     trajectoryPlot = new QCustomPlot(this);
-    trajectoryPlot->setMinimumHeight(250);
+    trajectoryPlot->setMinimumHeight(200);
     trajectoryPlot->xAxis->setLabel("Время (с)");
     trajectoryPlot->yAxis->setLabel("Угол u(t), рад");
 
+    speedtrajectoryPlot = new QCustomPlot(this);
+    speedtrajectoryPlot->setMinimumHeight(200);
+    speedtrajectoryPlot->xAxis->setLabel("Время (с)");
+    speedtrajectoryPlot->yAxis->setLabel("Скорость u'(t), рад");
+
     phasePortraitPlot = new QCustomPlot(this);
-    phasePortraitPlot->setMinimumHeight(250);
+    phasePortraitPlot->setMinimumHeight(200);
     phasePortraitPlot->xAxis->setLabel("Угол u(t), рад");
     phasePortraitPlot->yAxis->setLabel("Скорость u'(t), рад/с");
 
@@ -85,6 +90,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     mainLayout->addLayout(inputLayout);
     mainLayout->addWidget(trajectoryPlot);
+    mainLayout->addWidget(speedtrajectoryPlot);
     mainLayout->addWidget(phasePortraitPlot);
 
     QWidget *centralWidget = new QWidget(this);
@@ -170,6 +176,7 @@ void MainWindow::plotGraphs(const std::vector<StepData>& steps)
 
     // Построение фазового портрета (скорость как функция угла)
     plotGraph(phasePortraitPlot, angleData, velocityData, "Угол u(t), рад", "Скорость v(t), рад/с");
+
 }
 
 void MainWindow::plotGraph(QCustomPlot* plot, const QVector<double>& xData, const QVector<double>& yData, const QString& xAxisLabel, const QString& yAxisLabel)
@@ -178,6 +185,9 @@ void MainWindow::plotGraph(QCustomPlot* plot, const QVector<double>& xData, cons
         qDebug() << "Error: Empty data for plotting.";
         return;
     }
+
+    plot->yAxis->setNumberFormat("e");     // Фиксированная точка
+    plot->yAxis->setNumberPrecision(1);
 
     plot->clearGraphs();
     plot->addGraph();
@@ -326,7 +336,7 @@ void MainWindow::calculatePendulum()
     State y0 = {u0, v0}; // Начальные значения u и v
     double t0 = 0.0;     // Начальное время
     std::pair<std::vector<StepData>, RK4Params> result = adaptiveRK4(y0, t0, t_end, dt, epsilon, g, L, step_max, bourdary);
-
+    plotGraphs(result.first);
     if (SecondWindowptr == nullptr) {
         SecondWindowptr = new secondwindow();
 
@@ -363,7 +373,7 @@ void MainWindow::calculatePendulum()
                                                                 "Максимальный шаг: " + QString::number(result.second.max_h) + " с\n"
                                                                    "Минимальный шаг: " + QString::number(result.second.min_h) + " с\n"
                                                                    "Общее количество шагов: " + QString::number(result.second.num_steps) + "\n"
-                                                                       "Максимальная локальная ошибка (max error): " + QString::number(result.second.max_error) + "\n"
+                                                                       "Максимальная олп: " + QString::number(result.second.max_error) + "\n"
                                                                        "Максимальный |V11i-V1_2i|: " + QString::number(result.second.max_diff1) + " (на шаге " + QString::number(result.second.max_diff1_step) + ")\n"
                                                                                                                                       "Минимальный |V11i-V1_2i|: " + QString::number(result.second.min_diff1) + " (на шаге " + QString::number(result.second.min_diff1_step) + ")\n"
                                                                                                                                       "Максимальная |V21i-V2_2i|: " + QString::number(result.second.max_diff2) + " (на шаге " + QString::number(result.second.max_diff2_step) + ")\n"
