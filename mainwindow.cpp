@@ -174,9 +174,30 @@ void MainWindow::plotGraphs(const std::vector<StepData>& steps)
     // Построение графика скорости как функции времени
     plotGraph(speedtrajectoryPlot, timeData, velocityData, "Время (с)", "Скорость v(t), рад/с");
 
-    // Построение фазового портрета (скорость как функция угла)
-    plotGraph(phasePortraitPlot, angleData, velocityData, "Угол u(t), рад", "Скорость v(t), рад/с");
+    // === Построение аппроксимирующего эллипса ===
+    if (angleData.isEmpty() || velocityData.isEmpty()) {
+        qDebug() << "Нет данных для построения эллипса.";
+        return;
+    }
 
+    double minX = *std::min_element(angleData.begin(), angleData.end());
+    double maxX = *std::max_element(angleData.begin(), angleData.end());
+    double minY = *std::min_element(velocityData.begin(), velocityData.end());
+    double maxY = *std::max_element(velocityData.begin(), velocityData.end());
+
+    double centerX = (minX + maxX) / 2.0;
+    double centerY = (minY + maxY) / 2.0;
+    double semiAxisX = (maxX - minX) / 2.0;
+    double semiAxisY = (maxY - minY) / 2.0;
+
+    QVector<double> ellipseX, ellipseY;
+    for (double angle = 0; angle <= 360; angle += 1) {
+        double radAngle = angle * M_PI / 180.0;
+        ellipseX.append(centerX + semiAxisX * std::cos(radAngle));
+        ellipseY.append(centerY + semiAxisY * std::sin(radAngle));
+    }
+
+    plotEllipse(phasePortraitPlot, ellipseX, ellipseY, "Угол u(t), рад", "Скорость v(t), рад/с");
 }
 
 void MainWindow::plotGraph(QCustomPlot* plot, const QVector<double>& xData, const QVector<double>& yData, const QString& xAxisLabel, const QString& yAxisLabel)
@@ -214,6 +235,39 @@ void MainWindow::plotGraph(QCustomPlot* plot, const QVector<double>& xData, cons
 
     plot->replot();
 }
+
+void MainWindow::plotEllipse(QCustomPlot* plot, const QVector<double>& xData, const QVector<double>& yData, const QString& xAxisLabel, const QString& yAxisLabel)
+{
+    if (xData.isEmpty() || yData.isEmpty()) {
+                qDebug() << "Error: Empty data for plotting.";
+             return;
+        }
+               plot->clearGraphs(); // Очищаем предыдущие графики (если были)
+        QCPCurve *ellipseCurve = new QCPCurve(plot->xAxis, plot->yAxis);
+        ellipseCurve->setData(xData, yData);
+
+        QPen ellipsePen;
+        ellipsePen.setColor(Qt::red);
+        ellipsePen.setWidth(2);
+        ellipseCurve->setPen(ellipsePen);
+
+        double xMin = *std::min_element(xData.begin(), xData.end());
+        double xMax = *std::max_element(xData.begin(), xData.end());
+        double yMin = *std::min_element(yData.begin(), yData.end());
+        double yMax = *std::max_element(yData.begin(), yData.end());
+
+        double xPadding = (xMax - xMin) * 0.05;
+        double yPadding = (yMax - yMin) * 0.05;
+
+        plot->xAxis->setRange(xMin - xPadding, xMax + xPadding);
+        plot->yAxis->setRange(yMin - yPadding, yMax + yPadding);
+
+        plot->xAxis->setLabel(xAxisLabel);
+        plot->yAxis->setLabel(yAxisLabel);
+
+        plot->replot();
+    }
+
 
 bool MainWindow::validateInput(InputData& data) {
     bool ok;

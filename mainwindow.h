@@ -54,6 +54,7 @@ private:
     QCustomPlot *trajectoryPlot;
     QCustomPlot *speedtrajectoryPlot;
     QCustomPlot *phasePortraitPlot;
+    void plotEllipse(QCustomPlot* plot, const QVector<double>& xData, const QVector<double>& yData, const QString& xAxisLabel, const QString& yAxisLabel);
 
     // Функции для отображения и расчёта
     void applyStyles();
