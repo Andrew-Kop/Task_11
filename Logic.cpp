@@ -7,9 +7,9 @@ struct StepData {
     double t;          // Время
     double v11i;          // Численное решение v по первой компоненте
     double v1_2i;
+    double diff1;  //V11i-V1_2i
     double v21i;     // Решение с половинным шагом v
     double v2_2i;
-    double diff1;  //V11i-V1_2i
     double diff2; //v21i-v2_2i
     double error;      // Локальная ошибка (ОЛП)
     double hi;          // Шаг
@@ -41,15 +41,19 @@ using State = std::vector<double>;
 
 const double PI = 3.14159265358979323846;
 const int P = 4; // Порядок метода Рунге-Кутта
-/*
+
+
 State pendulumRHS(const State& y, double g, double L) {
     return {y[1], -g / L * sin(y[0])};
 }
-*/
 
+
+/*
 State pendulumRHS(const State& y, double g, double L) {
     return {y[1], -g / L * y[0]};
 }
+*/
+
 
 // Метод Рунге-Кутта 4-го порядка
 State rungeKuttaStep(const State& y, double h, double g, double L, State (*f)(const State&, double, double)) {
@@ -130,7 +134,7 @@ std::pair<std::vector<StepData>, RK4Params> adaptiveRK4(State y0, double t0, dou
             if (error <= epsilon / (2 * std::pow(2, P))) {
                 h *= 2.0;
                 C2++;
-                max_h = std::max(max_h, h);
+
             }
         } else {
             h /= 2.0;
@@ -145,6 +149,7 @@ std::pair<std::vector<StepData>, RK4Params> adaptiveRK4(State y0, double t0, dou
         if (t + h > t_end) {
             h = t_end - t;
         }
+        max_h = std::max(max_h, h);
     }
 
     //double time_diff = h;

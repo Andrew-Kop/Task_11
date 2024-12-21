@@ -376,8 +376,8 @@ void MainWindow::calculatePendulum()
                                                                        "Максимальная олп: " + QString::number(result.second.max_error) + "\n"
                                                                        "Максимальный |V11i-V1_2i|: " + QString::number(result.second.max_diff1) + " (на шаге " + QString::number(result.second.max_diff1_step) + ")\n"
                                                                                                                                       "Минимальный |V11i-V1_2i|: " + QString::number(result.second.min_diff1) + " (на шаге " + QString::number(result.second.min_diff1_step) + ")\n"
-                                                                                                                                      "Максимальная |V21i-V2_2i|: " + QString::number(result.second.max_diff2) + " (на шаге " + QString::number(result.second.max_diff2_step) + ")\n"
-                                                                                                                                      "Минимальная |V21i-V2_2i|: " + QString::number(result.second.min_diff2) + " (на шаге " + QString::number(result.second.min_diff2_step) + ")\n";
+                                                                                                                                      "Максимальный |V21i-V2_2i|: " + QString::number(result.second.max_diff2) + " (на шаге " + QString::number(result.second.max_diff2_step) + ")\n"
+                                                                                                                                      "Минимальный |V21i-V2_2i|: " + QString::number(result.second.min_diff2) + " (на шаге " + QString::number(result.second.min_diff2_step) + ")\n";
 
 
 

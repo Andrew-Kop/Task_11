@@ -54,7 +54,7 @@ void secondwindow::fillTable(const std::vector<StepData>& steps) {
     resultsTableMainTask->setColumnCount(12); // Номер шага, t, Vi, V2i, Vi - V2i, ОЛП, h, C1, C2
 
     // Устанавливаем заголовки столбцов
-    QStringList headers = {"i", "t", "V11i", "V1_2i", "|V11i-V1_2i|", "V21i", "V2_2i", "|V21i-V2_2i|", "ОЛП", "h", "C1", "C2"};
+    QStringList headers = {"i", "t", "V11i", "V1_2i", "|V11i-V1_2i|", "V21i", "V2_2i", "|V21i-V2_2i|", "||S||", "h", "C1", "C2"};
     resultsTableMainTask->setHorizontalHeaderLabels(headers);
     resultsTableMainTask->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
